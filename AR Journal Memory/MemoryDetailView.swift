@@ -11,13 +11,8 @@ import AVFoundation
 struct MemoryDetailView: View {
     let memory: Memory
     @Binding var isPresented: Bool
-    var voiceNarrationEnabled: Bool = true
     @State private var isOpening = false
     var onDelete: (() -> Void)? = nil
-    
-    @State private var isSpeaking = false
-    @State private var speakError: String?
-    @State private var hasNarrated = false
     
     var body: some View {
         ZStack {
@@ -59,12 +54,6 @@ struct MemoryDetailView: View {
                     }
                     .frame(maxHeight: 220)
 
-                    if let err = speakError {
-                        Text(err)
-                            .foregroundColor(.red)
-                            .font(.caption)
-                    }
-
                     HStack(spacing: 12) {
                         Button(action: { withAnimation { isPresented = false } }) {
                             Text("Close")
@@ -86,16 +75,6 @@ struct MemoryDetailView: View {
                                 .cornerRadius(12)
                         }
                     }
-                    
-                    if isSpeaking {
-                        HStack(spacing: 8) {
-                            ProgressView().progressViewStyle(.circular).tint(.blue)
-                            Text("Speaking…")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 8)
-                    }
                 }
                 .padding(20)
                 .background(Color(UIColor.systemGray6))
@@ -108,26 +87,6 @@ struct MemoryDetailView: View {
         }
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) { isOpening = true }
-            // Auto-narrate if enabled and not already narrated
-            if voiceNarrationEnabled && !hasNarrated {
-                hasNarrated = true
-                autoNarrate()
-            }
-        }
-    }
-    
-    private func autoNarrate() {
-        Task { @MainActor in
-            isSpeaking = true
-            speakError = nil
-            do {
-                let narration = try await GeminiClient.narrateTitle(memory.title)
-                let audio = try await ElevenLabsClient.tts(narration)
-                try AudioStore.shared.play(data: audio)
-            } catch {
-                speakError = "Narration failed: \(error.localizedDescription)"
-            }
-            isSpeaking = false
         }
     }
 }

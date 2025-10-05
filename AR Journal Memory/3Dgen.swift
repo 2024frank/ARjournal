@@ -10,12 +10,9 @@ import RealityKit
 
 struct ThreeDGenView: View {
     @Binding var isPresented: Bool
-    var voiceNarrationEnabled: Bool
     var onPlaceObject: (String, URL) -> Void
     
     @State private var selectedModel: PresetModel? = nil
-    @State private var isSpeaking = false
-    @State private var speakError: String?
     
     enum PresetModel: String, CaseIterable, Identifiable {
         case couch = "Blue Couch"
@@ -53,10 +50,6 @@ struct ThreeDGenView: View {
                 ForEach(PresetModel.allCases) { model in
                     Button(action: {
                         selectedModel = model
-                        // Auto-narrate when model is selected
-                        if voiceNarrationEnabled {
-                            autoNarrate(model: model)
-                        }
                     }) {
                         HStack {
                             Image(systemName: model.icon)
@@ -86,13 +79,6 @@ struct ThreeDGenView: View {
                 }
             }
             
-            if let err = speakError {
-                Text(err)
-                    .foregroundColor(.red)
-                    .font(.caption)
-                    .multilineTextAlignment(.center)
-            }
-            
             // Action Buttons
             HStack(spacing: 15) {
                 Button("Cancel") { isPresented = false }
@@ -116,16 +102,6 @@ struct ThreeDGenView: View {
                 .background(selectedModel == nil ? Color.gray.opacity(0.4) : Color.blue)
                 .cornerRadius(12)
                 .disabled(selectedModel == nil)
-            }
-            
-            if isSpeaking {
-                HStack(spacing: 8) {
-                    ProgressView().progressViewStyle(.circular).tint(.blue)
-                    Text("Speaking…")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                }
-                .padding(.vertical, 8)
             }
         }
         .padding(24)
@@ -155,28 +131,12 @@ struct ThreeDGenView: View {
         print("❌ Asset not found: \(model.fileName)")
         return nil
     }
-    
-    private func autoNarrate(model: PresetModel) {
-        Task { @MainActor in
-            guard !isSpeaking else { return }
-            isSpeaking = true
-            speakError = nil
-            do {
-                let narration = try await GeminiClient.narrateTitle("A beautiful \(model.rawValue) for your AR space")
-                let audio = try await ElevenLabsClient.tts(narration)
-                try AudioStore.shared.play(data: audio)
-            } catch {
-                speakError = "Narration failed: \(error.localizedDescription)"
-            }
-            isSpeaking = false
-        }
-    }
 }
 
 #Preview {
     ZStack {
         Color.gray.ignoresSafeArea()
-        ThreeDGenView(isPresented: .constant(true), voiceNarrationEnabled: true) { name, url in
+        ThreeDGenView(isPresented: .constant(true)) { name, url in
             print("Placing \(name) from \(url)")
         }
     }

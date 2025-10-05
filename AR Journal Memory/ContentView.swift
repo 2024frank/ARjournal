@@ -18,7 +18,6 @@ struct ContentView : View {
     @State private var hasStarted = false
     @State private var isBooting = false
     @State private var countdown = 7
-    @AppStorage("voiceNarrationEnabled") private var voiceNarrationEnabled = true
 
     var body: some View {
         ZStack {
@@ -44,66 +43,38 @@ struct ContentView : View {
                 .ignoresSafeArea()
             }
             if hasStarted {
-                ZStack {
-                    TabView {
-                        // Add Memory tab
-                        ZStack {
-                            SharedARView(
-                                memoryManager: memoryManager,
-                                arCoordinator: arCoordinator,
-                                locationManager: locationManager,
-                                currentMode: .add
-                            )
-                            .edgesIgnoringSafeArea(.all)
-                            
-                            AddMemoryOverlay(
-                                memoryManager: memoryManager,
-                                arCoordinator: arCoordinator,
-                                locationManager: locationManager,
-                                voiceNarrationEnabled: voiceNarrationEnabled
-                            )
-                        }
-                        .tabItem { Label("Add Memory", systemImage: "plus.app") }
+                TabView {
+                    // Add Memory tab
+                    ZStack {
+                        SharedARView(
+                            memoryManager: memoryManager,
+                            arCoordinator: arCoordinator,
+                            locationManager: locationManager,
+                            currentMode: .add
+                        )
+                        .edgesIgnoringSafeArea(.all)
                         
-                        // Generate 3D Object tab
-                        ZStack {
-                            SharedARView(
-                                memoryManager: memoryManager,
-                                arCoordinator: arCoordinator,
-                                locationManager: locationManager,
-                                currentMode: .add
-                            )
-                            .edgesIgnoringSafeArea(.all)
-                            
-                            Generate3DOverlay(arCoordinator: arCoordinator, voiceNarrationEnabled: voiceNarrationEnabled)
-                        }
-                        .tabItem { Label("Generate 3D", systemImage: "cube") }
+                        AddMemoryOverlay(
+                            memoryManager: memoryManager,
+                            arCoordinator: arCoordinator,
+                            locationManager: locationManager
+                        )
                     }
+                    .tabItem { Label("Add Memory", systemImage: "plus.app") }
                     
-                    // Voice Narration Toggle - Top Right
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Toggle(isOn: $voiceNarrationEnabled) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: voiceNarrationEnabled ? "speaker.wave.3.fill" : "speaker.slash.fill")
-                                        .foregroundColor(.white)
-                                    Text("Voice")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.white)
-                                }
-                            }
-                            .toggleStyle(SwitchToggleStyle(tint: .blue))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.black.opacity(0.7))
-                            .cornerRadius(20)
-                            .padding(.top, 50)
-                            .padding(.trailing, 16)
-                        }
-                        Spacer()
+                    // Generate 3D Object tab
+                    ZStack {
+                        SharedARView(
+                            memoryManager: memoryManager,
+                            arCoordinator: arCoordinator,
+                            locationManager: locationManager,
+                            currentMode: .add
+                        )
+                        .edgesIgnoringSafeArea(.all)
+                        
+                        Generate3DOverlay(arCoordinator: arCoordinator)
                     }
+                    .tabItem { Label("Generate 3D", systemImage: "cube") }
                 }
             }
         }
@@ -168,7 +139,6 @@ struct AddMemoryOverlay: View {
     @ObservedObject var memoryManager: MemoryManager
     @ObservedObject var arCoordinator: ARCoordinatorWrapper
     @ObservedObject var locationManager: LocationManager
-    var voiceNarrationEnabled: Bool
     @State private var showingMemoryInput = false
     
     var body: some View {
@@ -212,7 +182,6 @@ struct AddMemoryOverlay: View {
                         get: { arCoordinator.selectedMemory != nil },
                         set: { if !$0 { arCoordinator.selectedMemory = nil } }
                     ),
-                    voiceNarrationEnabled: voiceNarrationEnabled,
                     onDelete: {
                         memoryManager.deleteMemory(id: memory.id)
                         arCoordinator.selectedMemory = nil
@@ -230,7 +199,6 @@ struct AddMemoryOverlay: View {
 // Generate 3D overlay that presents the 3D object generator UI
 struct Generate3DOverlay: View {
     @ObservedObject var arCoordinator: ARCoordinatorWrapper
-    var voiceNarrationEnabled: Bool
     @State private var showingGenerator: Bool = true
     @State private var showingPlacementHint: Bool = false
     
@@ -242,7 +210,6 @@ struct Generate3DOverlay: View {
                     .onTapGesture { showingGenerator = false }
                 ThreeDGenView(
                     isPresented: $showingGenerator,
-                    voiceNarrationEnabled: voiceNarrationEnabled,
                     onPlaceObject: { name, url in
                         showingGenerator = false
                         arCoordinator.coordinator?.load3DModel(from: url, name: name)
@@ -395,10 +362,12 @@ enum ARViewContainer {
                 let cam = camT.columns.3
                 for (_, title) in self.textEntities {
                     let pos = title.position(relativeTo: nil)
-                    var toCam = SIMD3<Float>(cam.x - pos.x, cam.y - pos.y, cam.z - pos.z)
+                    var toCam = SIMD3<Float>(cam.x - pos.x, 0, cam.z - pos.z) // Only use X and Z, keep Y flat
                     let len = simd_length(toCam); if len < 0.005 { continue }
                     toCam /= len
-                    let q = simd_quatf(from: SIMD3<Float>(0,0,-1), to: toCam)
+                    // Create rotation only on the Y axis (horizontal rotation)
+                    let angle = atan2(toCam.x, -toCam.z)
+                    let q = simd_quatf(angle: angle, axis: SIMD3<Float>(0, 1, 0))
                     title.orientation = simd_normalize(q)
                 }
             }
