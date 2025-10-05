@@ -32,30 +32,23 @@ struct WelcomeView: View {
                         .font(.system(size: 64))
                         .foregroundColor(.white)
                         .shadow(radius: 10)
-                    Text("AR Journal")
+                    Text("AR Journal Memory")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
-                    Text("Place letters in your world.")
+                    Text("Let's put notes in the real world virtually and never lose them.")
                         .foregroundColor(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
                 }
                 .padding(.top, 60)
                 
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "camera.fill").foregroundColor(.white)
-                        Text("Camera: Used to render AR content in your environment.")
-                            .foregroundColor(.white)
-                    }
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "location.fill").foregroundColor(.white)
-                        Text("Location: Keeps memories anchored near where you created them.")
-                            .foregroundColor(.white)
-                    }
-                }
-                .padding()
-                .background(Color.white.opacity(0.15))
-                .cornerRadius(14)
+                // Catchy one-liner
+                Text("Place living notes in your space and open them when it matters.")
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .background(Color.white.opacity(0.15))
+                    .cornerRadius(14)
                 
                 // 3D-like loading animation during boot
                 if isBooting {
