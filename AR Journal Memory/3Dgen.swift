@@ -138,17 +138,21 @@ struct ThreeDGenView: View {
     }
     
     private func getAssetURL(for model: PresetModel) -> URL? {
-        // Try workspace asset directory first
-        let workspaceAsset = URL(fileURLWithPath: "/Users/fkusiapp/Desktop/dev/AR Journal Memory/asset/\(model.fileName)")
-        if FileManager.default.fileExists(atPath: workspaceAsset.path) {
-            return workspaceAsset
-        }
-        
-        // Try bundle
-        if let bundleURL = Bundle.main.url(forResource: model.fileName.replacingOccurrences(of: ".usdz", with: ""), withExtension: "usdz") {
+        // Try bundle first (this is where it will be in the app)
+        let resourceName = model.fileName.replacingOccurrences(of: ".usdz", with: "")
+        if let bundleURL = Bundle.main.url(forResource: resourceName, withExtension: "usdz") {
+            print("✅ Found asset in bundle: \(bundleURL)")
             return bundleURL
         }
         
+        // Fallback: Try workspace asset directory for development
+        let workspaceAsset = URL(fileURLWithPath: "/Users/fkusiapp/Desktop/dev/AR Journal Memory/asset/\(model.fileName)")
+        if FileManager.default.fileExists(atPath: workspaceAsset.path) {
+            print("✅ Found asset in workspace: \(workspaceAsset)")
+            return workspaceAsset
+        }
+        
+        print("❌ Asset not found: \(model.fileName)")
         return nil
     }
     
